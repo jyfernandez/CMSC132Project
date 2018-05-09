@@ -12,14 +12,14 @@ END file_read;
 ARCHITECTURE behave OF file_read is
 
     -- array of lines
-    type instruction_array is array (0 to 14) of std_logic_vector(5 downto 0);
-    type register_array is array (0 to 45) of std_logic_vector(5 downto 0);
-    type immediate_array is array (0 to 45) of std_logic_vector(5 downto 0);
+    type instruction_array is array (0 to 10) of std_logic_vector(5 downto 0);
+    type register_array is array (0 to 32) of std_logic_vector(5 downto 0);
+    type immediate_array is array (0 to 32) of std_logic_vector(5 downto 0);
+    type operand_array is array (0 to 32) of std_logic_vector(5 downto 0);
 
 
 
     BEGIN 
-        -- file reading
         process
             file file_pointer : text; -- pointed to the text file
             variable line_num : line; -- temporary holder for line
@@ -28,11 +28,12 @@ ARCHITECTURE behave OF file_read is
             variable i_counter : integer := 0; -- counter for instructions
             variable r_counter : integer := 0; -- counter for registers
             variable m_counter : integer := 0; -- counter for immediate
+            variable o_counter : integer := 0; -- counter for operand
             variable i : integer := 0; -- index
             variable j : integer := 0; -- index
 
             -- variable for instruction
-            variable opcode : std_logic_vector(5 downto 0);
+            variable opcode : std_logic_vector(0 to 5);
             -- variable for space
             variable space : character;
 
@@ -40,13 +41,15 @@ ARCHITECTURE behave OF file_read is
             variable instructions : instruction_array;
             variable registers : register_array;
             variable immediates : immediate_array;
+            variable operands : operand_array;
             
 
             begin
                 -- open the file in Read mode
                 file_open(file_pointer, ".\read.txt", READ_MODE);    
                 
-                -- traverse the whole file
+                -- File Reading and Classification
+                report "CLASSIFICATION OF OPCODES";
                 while not endfile(file_pointer) loop
 
                     readline (file_pointer, line_num); -- read a specific line
@@ -57,29 +60,73 @@ ARCHITECTURE behave OF file_read is
                             read(line_num, space); -- get space
                         end if;
                         
-                        -- classify opcodes
-                        if(opcode(5) = '0') 
-                            then if(opcode(4) = '0') then -- 00 opcode 
-                                report "instuction";
+                        -- Classify Opcodes
+                        if(opcode(0) = '0') 
+                            then if(opcode(1) = '0') then -- 00 opcode 
+                                report "instruction";
                                 instructions(i_counter) := opcode;
                                 i_counter := i_counter + 1;
-                            elsif(opcode(4) = '1') then -- 01 immediate
-                                report "Immediate";
-                                immediates(m_counter) := opcode;                                
+                            elsif(opcode(1) = '1') then -- 01 immediate
+                                report "immediate";
+                                immediates(m_counter) := opcode;                                 
+                                operands(o_counter) := opcode;                                 
                                 m_counter := m_counter + 1;
+                                o_counter := o_counter + 1;                                
                             end if;
-                        elsif (opcode(5) = '1') then -- 10 register
+                        elsif (opcode(0) = '1') then -- 10 register
                             report "register";
-                            registers(r_counter) := opcode;                                                            
+                            registers(r_counter) := opcode;    
+                            operands(o_counter) := opcode;                                                                                                                     
                             r_counter := r_counter + 1;
+                            o_counter := o_counter + 1;                            
                         end if;
                     end loop;
                     
                     i := i + 1; -- increment indexing
-                    
                 end loop;
 
                 no_of_instructions := i; -- secure the size of instructions
+
+                            
+                -- Specifying Instruction
+                report " ";
+                report "SPECIFYING INSTRUCTIONS";
+                for i in 0 to no_of_instructions-1 loop
+                    if( instructions(i)(0) = '0' and instructions(i)(1) = '0' and instructions(i)(2) = '0' ) then
+                        report "Load";
+                    elsif( instructions(i)(0) = '1' and instructions(i)(1) = '0' and instructions(i)(2) = '0' ) then
+                        report "Add";
+                    elsif( instructions(i)(0) = '0' and instructions(i)(1) = '1' and instructions(i)(2) = '0' ) then
+                        report "Sub";
+                    elsif(instructions(i)(0) = '1' and instructions(i)(1) = '1' and instructions(i)(2) = '0') then
+                        report "Mul";
+                    elsif(instructions(i)(0) = '0' and instructions(i)(1) = '0' and instructions(i)(2) = '1') then
+                        report "Div";
+                    elsif(instructions(i)(1) = '0' and instructions(i)(1) = '0' and instructions(i)(2) = '1') then
+                        report "Mod" ;
+                    else
+                        report "Invalid";  
+                    end if;
+                end loop;
+                
+                -- Specifying Immediate
+                report " ";
+                report "SPECIFYING IMMEDIATE";
+                for i in 0 to m_counter-1 loop
+                    if( immediates(i)(0) = '0' and immediates(i)(1) = '0' ) then
+                        report "0";
+                    elsif ( immediates(i)(0) = '0' and immediates(i)(1) = '1' ) then
+                        report "2";
+                    elsif ( immediates(i)(0) = '1' and immediates(i)(1) = '0' ) then
+                        report "1";
+                    elsif ( immediates(i)(0) = '1' and immediates(i)(1) = '1' ) then
+                        report "3";
+                    else
+                        report "Invalid";  
+                    end if;
+                end loop;
+
+
 
                 -- close the file
                 file_close(file_pointer);
