@@ -126,6 +126,27 @@ ARCHITECTURE behave OF file_read is
                     end if;
                 end loop;
 
+                                -- Specifying Immediate
+                report " ";
+                report "SPECIFYING REGISTER";
+                for i in 0 to r_counter-1 loop
+                    if(registers(i)(4) = '0' and registers(i)(3) = '0' and registers(i)(2) = '0' and registers(i)(1) = '0' and registers(i)(0) = '0') then
+                        report "R0";
+                    elsif(registers(i)(4) = '0' and registers(i)(3) = '0' and registers(i)(2) = '0' and registers(i)(1) = '0' and registers(i)(0) = '1') then
+                        report "R1";
+                    elsif(registers(i)(4) = '0' and registers(i)(3) = '0' and registers(i)(2) = '0' and registers(i)(1) = '1' and registers(i)(0) = '0') then
+                        report "R2";
+                    elsif(registers(i)(4) = '0' and registers(i)(3) = '0' and registers(i)(2) = '0' and registers(i)(1) = '1' and registers(i)(0) = '0') then
+                        report "R3";
+                    elsif(registers(i)(4) = '0' and registers(i)(3) = '0' and registers(i)(2) = '1' and registers(i)(1) = '0' and registers(i)(0) = '0') then
+                        report "R4";
+                    elsif(registers(i)(4) = '0' and registers(i)(3) = '0' and registers(i)(2) = '1' and registers(i)(1) = '0' and registers(i)(0) = '1') then
+                        report "R5";
+                    else
+                        report "Invalid";  
+                    end if;
+                end loop;
+
 
 
                 -- close the file
