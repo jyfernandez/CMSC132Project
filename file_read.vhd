@@ -5,6 +5,28 @@ use STD.textio.all;
 use ieee.std_logic_textio.all;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
+-- READ ME
+
+-- TO dO:
+--     1. Convert PC to binary (4-bits)
+--     2. Start Clock Cycle shit
+--     3. Gumawa ng mock instructions (hanggang 15 sana or kahit kumuha sa mga past handouts)
+
+-- Reminders:
+--     1. Check if tama yung pagset ng flags (mindali ko)
+--     2. Check yung buong program as you code
+--     3. Piniprint pala nung code yung result lang nung mismong operation
+--     4. Yung nasa read.txt 
+        -- LOAD R0, 3
+        -- LOAD R1, 1
+        -- ADD R2, R0, R1
+        -- SUB R2, R0, R1
+        -- DIV R2, R0, R1
+        -- MUL R2, R0, R1
+        -- MOD R2
+    
+-- #LETZDOTHISSHIT 
+-- #HAHAAHAHAHAHHA
 
 ENTITY file_read is
 END file_read;
@@ -16,12 +38,13 @@ ARCHITECTURE behave OF file_read is
     type register_array is array (0 to 44) of string(1 to 6);
     type immediate_array is array (0 to 44) of string(1 to 6);
     type operand_array is array (0 to 44) of string(1 to 6);
+    type values_array is array (0 to 44) of integer;
 
     -- ARRAYS OF VALUES
     type register_values is array (0 to 32) of integer;
 
     -- FUNCTIONS
-    function classifyOC (opcode: in string)
+    function classifyOC (opcode : in string)
         return integer is variable classification : integer := -1;
         begin
             if(opcode(1) = '0') then 
@@ -37,7 +60,7 @@ ARCHITECTURE behave OF file_read is
         return classification;
     end function classifyOC;
 
-    function specifyINST (instruction: in string)
+    function specifyINST (instruction : in string)
         return integer is variable classification : integer := -1;
         begin
             if( instruction = "000000" ) then
@@ -58,28 +81,24 @@ ARCHITECTURE behave OF file_read is
         return classification;
     end function specifyINST;
 
-    function specifyIMMDT (immediate: in string)
+    function specifyIMMDT (immediate : in string)
         return integer is variable classification : integer := -1;
         begin
             if( immediate = "010000" ) then
-                report "0";
                 classification := 0;
             elsif ( immediate = "010001" ) then
-                report "1";
                 classification := 1;
             elsif ( immediate = "010010" ) then
-                report "2";
                 classification := 2;
             elsif ( immediate = "010011" ) then
-                report "3";
                 classification := 3;
-            else
-                report "Invalid"; 
+            -- else
+            --     report "Invalid"; 
             end if;
         return classification;
     end function specifyIMMDT;
 
-    function specifyREG (vregister: in string)
+    function specifyREG (vregister : in string)
         return integer is variable classification : integer := -1;
         begin
             if(vregister = "100000") then
@@ -151,6 +170,65 @@ ARCHITECTURE behave OF file_read is
             end if;
         return classification;
     end function specifyREG;
+
+    function load (operand2 : in integer)
+        return integer is variable result : integer := -1;
+            begin 
+                result := operand2;
+                report integer'image(result);
+                return result;
+    end function;
+
+    function modulo (operand2 : in  integer)
+        return integer is variable result : integer := -1;
+            begin
+                result := operand2 - ((operand2/2)*2);
+                report integer'image(result);
+                return result;
+    end function;
+
+    function add (operand2 : in integer; operand1 : in integer)
+        return integer is variable result : integer := -1;
+           begin
+                result := operand1 + operand2;
+                report integer'image(result);
+                return result;
+    end function;
+
+    function sub (operand2 : in integer; operand1 : in integer)
+        return integer is variable result : integer := -1;
+           begin
+                result := operand2 - operand1;
+                report integer'image(result);
+                return result;
+    end function;
+
+    function mul (operand2 : in  integer; operand1 : in integer)
+        return integer is variable result : integer := -1;
+            begin
+                 result := operand1 * operand2;
+                report integer'image(result);
+                return result;
+    end function;
+
+    function div (operand2 : in  integer; operand1 : in integer)
+        return integer is variable result : integer := -1;
+            begin
+                result := operand2/operand1;
+                report integer'image(result);
+                return result;
+    end function;
+
+    function get_value(operand : in string)
+        return integer is variable classification : integer := -1;
+            begin
+                if(classifyOC(operand) = 2) then 
+                    classification := specifyREG(operand);
+                else
+                    classification := specifyIMMDT(operand);                           
+                end if;
+        return classification;
+    end function;
              
     BEGIN 
         process
@@ -183,9 +261,14 @@ ARCHITECTURE behave OF file_read is
             variable U_flag : integer := 0;
             variable Z_flag : integer := 0;
             variable PC : integer := 0; -- number of current instruction
+            variable result: integer := 0;
             
             -- variables for execution
             variable operand_counter : integer := 0;
+            variable register_values : values_array;
+            variable cur_op1 : integer := 0;
+            variable cur_op2 : integer := 0;
+            variable storage : integer := 0;
 
             begin
                 -- open the file in Read mode
@@ -221,7 +304,8 @@ ARCHITECTURE behave OF file_read is
                             m_counter := m_counter + 1;
                             o_counter := o_counter + 1;
                         else
-                            report opcode;
+                            operands(o_counter) := opcode;
+                            o_counter := o_counter + 1;
                         end if;  
                     end loop;
                     
@@ -229,30 +313,74 @@ ARCHITECTURE behave OF file_read is
                 end loop;
                     no_of_instructions := i;
 
-                
                 -- Execution
-                report "Execution";                
+                report "EXECUTION";                
                 while (PC < no_of_instructions) loop
                     
+                    storage := get_value(Operands(operand_counter)); -- register
+
+                     -- get the immediate value or the register index
+                    cur_op1 := get_value(Operands(operand_counter+1));
+                    cur_op2 := get_value(Operands(operand_counter+2));
+
+                    -- report integer'image(cur_op1) & " : " & integer'image(cur_op2);
+                    -- report Operands(operand_counter+1) & " : " & Operands(operand_counter+2);
+                    
+                    if(classifyOC(Operands(operand_counter+1)) = 2) then -- if register
+                        cur_op1 := register_values(cur_op1);
+                    end if;
+
+                    if(classifyOC(Operands(operand_counter+2)) = 2) then -- if register
+                        cur_op2 := register_values(cur_op2);
+                    end if;
+                   
                     -- identify the instruction name
                     if (specifyINST(instructions(PC)) = 1) then
-                        report "LOAD"& ", " & Operands(operand_counter) & ", " & Operands(operand_counter+1);
+                        register_values(storage) := load(cur_op1);
                     elsif (specifyINST(instructions(PC)) = 2) then
-                        report "ADD" & ", " & Operands(operand_counter) & ", " & Operands(operand_counter+1) & ", " & Operands(operand_counter+2);                        
+                        register_values(storage) := add(cur_op1, cur_op2);
                     elsif (specifyINST(instructions(PC)) = 3) then
-                        report "SUB" & ", " & Operands(operand_counter) & ", " & Operands(operand_counter+1) & ", " & Operands(operand_counter+2);
+                        register_values(storage) := sub(cur_op1, cur_op2);
                     elsif (specifyINST(instructions(PC)) = 4) then
-                        report "MUL" & ", " & Operands(operand_counter) & ", " & Operands(operand_counter+1) & ", " & Operands(operand_counter+2);
+                        register_values(storage) := mul(cur_op1, cur_op2);
                     elsif (specifyINST(instructions(PC)) = 5) then
-                        report "DIV" & ", " & Operands(operand_counter) & ", " & Operands(operand_counter+1) & ", " & Operands(operand_counter+2);
-                    elsif (specifyINST(instructions(PC)) = 6) then 
-                        report "MOD" & ", " & Operands(operand_counter);
+                        register_values(storage) := div (cur_op1, cur_op2);
+                    elsif (specifyINST(instructions(PC)) = 6) then
+                        register_values(storage) := modulo(cur_op1); 
                     else 
                         report "Invalid";
                     end if;
-                    PC := PC + 1;
-                    operand_counter := operand_counter + 3;
 
+                    -- set flags
+                        if(register_values(storage) >= 0) then -- sign flag
+                            S_flag := 1;
+                        else
+                            S_flag := 0;
+                        end if;
+                        
+                        if(register_values(storage) > 3) then -- overflow flag
+                            O_flag := 1;
+                        else
+                            O_flag := 0;
+                        end if;
+
+                        if(register_values(storage) < 0) then -- underflow flag
+                            U_flag := 1;
+                        else
+                            U_flag := 0;
+                        end if;
+
+                        if(register_values(storage) = 0) then -- zero flag
+                            Z_flag := 1;
+                        else
+                            Z_flag := 0;
+                        end if;
+
+                    -- go to next instruction
+                    PC := PC + 1;
+
+                    -- go to next set of operands
+                    operand_counter := operand_counter + 3;
                    
                 end loop;
 
@@ -268,17 +396,22 @@ ARCHITECTURE behave OF file_read is
 
 end behave;
 
--- -- Specifying Instruction
+-- -- Specifying all Instruction
 -- for i in 0 to no_of_instructions-1 loop
 --     classification := specifyINST(instructions(i));
 -- end loop;
 
--- -- Specifying Immediate
+-- -- Specifying all Immediate
 -- for i in 0 to m_counter-1 loop
 --     classification := specifyIMMDT(immediates(i));
 -- end loop;
 
--- Specify Register
+-- Specify all Register
 -- for i in 0 to r_counter-1 loop
 --     report integer'image(specifyREG(registers(i)));
+-- end loop;
+
+-- -- Print all Operands
+-- for i in 0 to o_counter-1 loop
+--     report operands(i);
 -- end loop;
