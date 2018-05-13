@@ -5,33 +5,14 @@ use STD.textio.all;
 use ieee.std_logic_textio.all;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
--- READ ME
-
--- TO dO:
---     1. Convert PC to binary (4-bits)
---     2. Start Clock Cycle shit
---     3. Gumawa ng mock instructions (hanggang 15 sana or kahit kumuha sa mga past handouts)
-
--- Reminders:
---     1. Check if tama yung pagset ng flags (mindali ko)
---     2. Check yung buong program as you code
---     3. Piniprint pala nung code yung result lang nung mismong operation
---     4. Yung nasa read.txt 
-        -- LOAD R0, 3
-        -- LOAD R1, 1
-        -- ADD R2, R0, R1
-        -- SUB R2, R0, R1
-        -- DIV R2, R0, R1
-        -- MUL R2, R0, R1
-        -- MOD R2
-    
--- #LETZDOTHISSHIT 
--- #HAHAAHAHAHAHHA
-
 ENTITY file_read is
 END file_read;
 
 ARCHITECTURE behave OF file_read is
+    signal clock_cycle: std_logic;
+    signal F, D, E, M, W: std_logic;
+    signal S_flag, O_flag, U_flag, Z_flag : std_logic;
+    signal pc0, pc1, pc2, pc3 : std_logic;
 
     -- ARRAYS of OPCODES
     type instruction_array is array (0 to 14) of string(1 to 6);
@@ -229,7 +210,46 @@ ARCHITECTURE behave OF file_read is
                 end if;
         return classification;
     end function;
-             
+    
+    function pc_to_binary(pc : in integer)
+        return integer is variable result : integer := 0;
+            begin
+                if pc = 15 then
+                    result := 1111;
+                elsif pc = 14 then
+                    result := 1110;
+                elsif pc = 13 then
+                    result := 1101;
+                elsif pc = 12 then
+                    result := 1100;
+                elsif pc = 11 then
+                    result := 1011;  
+                elsif pc = 10 then
+                    result := 1010;
+                elsif pc = 9 then
+                    result := 1001;
+                elsif pc = 8 then
+                    result := 1000;
+                elsif pc = 7 then
+                    result := 0111;
+                elsif pc = 6 then
+                    result := 0110;
+                elsif pc = 5 then
+                    result := 0101;
+                elsif pc = 4 then
+                    result := 0100;
+                elsif pc = 3 then
+                    result := 0011;
+                elsif pc = 2 then
+                    result := 0010;
+                elsif pc = 1 then
+                    result := 0001;
+                elsif pc = 0 then
+                    result := 0000;
+                end if;
+        return result;
+    end function;
+    
     BEGIN 
         process
             file file_pointer : text; -- pointed to the text file
@@ -256,12 +276,9 @@ ARCHITECTURE behave OF file_read is
             variable operands : operand_array;
 
             -- Flags
-            variable S_flag : integer := 0;
-            variable O_flag : integer := 0;
-            variable U_flag : integer := 0;
-            variable Z_flag : integer := 0;
             variable PC : integer := 0; -- number of current instruction
             variable result: integer := 0;
+            variable answer: integer := 0;
             
             -- variables for execution
             variable operand_counter : integer := 0;
@@ -270,62 +287,125 @@ ARCHITECTURE behave OF file_read is
             variable cur_op2 : integer := 0;
             variable storage : integer := 0;
 
-            begin
-                -- open the file in Read mode
-                file_open(file_pointer, ".\read.txt", READ_MODE);    
-                
-                -- File Reading and Classification
-                report "CLASSIFICATION OF OPCODES";
-                while not endfile(file_pointer) loop
+            -- pipeline checkers;
+            variable fchecker : integer := 0;
+            variable dchecker : integer := 0;
+            variable echecker : integer := 0;
+            variable mchecker : integer := 0;
+            variable wchecker : integer := 0;
 
-                    readline (file_pointer, line_num); -- read a specific line
+        begin
+            -- open the file in Read mode
+            file_open(file_pointer, ".\read.txt", READ_MODE);    
+ 
+            -- File Reading and Classification
+            report "CLASSIFICATION OF OPCODES";
+            while not endfile(file_pointer) loop
 
-                    for i in 1 to 4 loop
-                        READ(line_num, opcode); -- get opcode
-                        if (i /= 4) then
-                            read(line_num, space); -- get space
-                        end if;
+                readline (file_pointer, line_num); -- read a specific line
 
-                        -- Classify Opcodes
-                        classification := classifyOC(opcode);
+                for i in 1 to 4 loop
+                    READ(line_num, opcode); -- get opcode
+                    if (i /= 4) then
+                        read(line_num, space); -- get space
+                    end if;
 
-                        -- Store Opcodes
-                        if(classification = 1) then
-                            instructions(i_counter) := opcode;
-                            i_counter := i_counter + 1;
-                        elsif(classification = 2) then
-                            registers(r_counter) := opcode;    
-                            operands(o_counter) := opcode;                                                                                                                     
-                            r_counter := r_counter + 1;
-                            o_counter := o_counter + 1;   
-                        elsif(classification = 3) then
-                            immediates(m_counter) := opcode;                                 
-                            operands(o_counter) := opcode;                                 
-                            m_counter := m_counter + 1;
-                            o_counter := o_counter + 1;
-                        else
-                            operands(o_counter) := opcode;
-                            o_counter := o_counter + 1;
-                        end if;  
-                    end loop;
-                    
-                    i := i + 1; -- increment indexing
+                    -- Classify Opcodes
+                    classification := classifyOC(opcode);
+
+                    -- Store Opcodes
+                    if(classification = 1) then
+                        instructions(i_counter) := opcode;
+                        i_counter := i_counter + 1;
+                    elsif(classification = 2) then
+                        registers(r_counter) := opcode;    
+                        operands(o_counter) := opcode;                                                                                                                     
+                        r_counter := r_counter + 1;
+                        o_counter := o_counter + 1;   
+                    elsif(classification = 3) then
+                        immediates(m_counter) := opcode;                                 
+                        operands(o_counter) := opcode;                                 
+                        m_counter := m_counter + 1;
+                        o_counter := o_counter + 1;
+                    else
+                        operands(o_counter) := opcode;
+                        o_counter := o_counter + 1;
+                    end if;  
                 end loop;
-                    no_of_instructions := i;
+                
+                i := i + 1; -- increment indexing
+            end loop;
 
-                -- Execution
-                report "EXECUTION";                
-                while (PC < no_of_instructions) loop
+            -- close the file
+            file_close(file_pointer);
+
+            no_of_instructions := i; -- secure the size of instructions
+
+            -- Execution
+            report "EXECUTION";                
+            while (PC < no_of_instructions) loop
+                
+                -- FEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEETCH
+                if F = '0' and fchecker = 0 then
+                    -- report "# " & integer'image(pc_to_binary(PC));
+                    result := pc_to_binary(PC);
+
+                    -- PC counter
+                    if result/1000 /= 0 then
+                        pc3 <= '1';
+                        result := (result - ((result/1000)*1000));
+                    else
+                        pc3 <= '0';
+                    end if;
                     
+                    if result/100 /= 0 then
+                        pc2 <= '1';
+                        result := (result - ((result/100)*100));
+                    else
+                        pc2 <= '0';
+                    end if;
+                    
+                    if result/10 /= 0 then
+                        pc1 <= '1';
+                        result := (result - ((result/10)*10));
+                    else
+                        pc1 <= '0';
+                    end if;
+
+                    if result /= 0 then
+                        pc0 <= '1';
+                    else
+                        pc0 <= '0';
+                    end if;
+
+                    -- get the register for storage
                     storage := get_value(Operands(operand_counter)); -- register
 
-                     -- get the immediate value or the register index
+                    -- get the immediate value or the register index
                     cur_op1 := get_value(Operands(operand_counter+1));
                     cur_op2 := get_value(Operands(operand_counter+2));
 
-                    -- report integer'image(cur_op1) & " : " & integer'image(cur_op2);
-                    -- report Operands(operand_counter+1) & " : " & Operands(operand_counter+2);
-                    
+                    F <= '1';
+                else
+                    F <= '0';
+                    pc0 <= '1';
+                    pc1 <= '1';
+                    pc2 <= '1';
+                    pc3 <= '1';
+                end if;
+
+                -- DEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEECODE
+                if fchecker = 1 and D = '0' and dchecker = 0 then
+                    D <= '1';
+                else
+                    D <= '0';
+                end if;
+
+                -- report integer'image(cur_op1) & " : " & integer'image(cur_op2);
+                -- report Operands(operand_counter+1) & " : " & Operands(operand_counter+2);
+                
+                -- EXEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEECUTE
+                if E = '0' and echecker = 0 and dchecker = 1 then                    
                     if(classifyOC(Operands(operand_counter+1)) = 2) then -- if register
                         cur_op1 := register_values(cur_op1);
                     end if;
@@ -333,85 +413,122 @@ ARCHITECTURE behave OF file_read is
                     if(classifyOC(Operands(operand_counter+2)) = 2) then -- if register
                         cur_op2 := register_values(cur_op2);
                     end if;
-                   
+                
                     -- identify the instruction name
                     if (specifyINST(instructions(PC)) = 1) then
-                        register_values(storage) := load(cur_op1);
+                        answer := load(cur_op1);
                     elsif (specifyINST(instructions(PC)) = 2) then
-                        register_values(storage) := add(cur_op1, cur_op2);
+                        answer := add(cur_op1, cur_op2);
                     elsif (specifyINST(instructions(PC)) = 3) then
-                        register_values(storage) := sub(cur_op1, cur_op2);
+                        answer := sub(cur_op1, cur_op2);
                     elsif (specifyINST(instructions(PC)) = 4) then
-                        register_values(storage) := mul(cur_op1, cur_op2);
+                        answer := mul(cur_op1, cur_op2);
                     elsif (specifyINST(instructions(PC)) = 5) then
-                        register_values(storage) := div (cur_op1, cur_op2);
+                        answer := div (cur_op1, cur_op2);
                     elsif (specifyINST(instructions(PC)) = 6) then
-                        register_values(storage) := modulo(cur_op1); 
+                        answer := modulo(cur_op1); 
                     else 
                         report "Invalid";
                     end if;
 
                     -- set flags
-                        if(register_values(storage) >= 0) then -- sign flag
-                            S_flag := 1;
-                        else
-                            S_flag := 0;
-                        end if;
-                        
-                        if(register_values(storage) > 3) then -- overflow flag
-                            O_flag := 1;
-                        else
-                            O_flag := 0;
-                        end if;
+                    if(answer >= 0) then -- sign flag
+                        S_flag <= '0';
+                    else
+                        S_flag <= '1';
+                    end if;
+                    
+                    if(answer > 3) then -- overflow flag
+                        O_flag <= '1';
+                    else
+                        O_flag <= '0';
+                    end if;
 
-                        if(register_values(storage) < 0) then -- underflow flag
-                            U_flag := 1;
-                        else
-                            U_flag := 0;
-                        end if;
+                    if(answer < 0) then -- underflow flag
+                        U_flag <= '1';
+                    else
+                        U_flag <= '0';
+                    end if;
 
-                        if(register_values(storage) = 0) then -- zero flag
-                            Z_flag := 1;
-                        else
-                            Z_flag := 0;
-                        end if;
+                    if(answer = 0) then -- zero flag
+                        Z_flag <= '1';
+                    else
+                        Z_flag <= '0';
+                    end if;
+                
+                    E <= '1';
+                else
+                    E <= '0';
+                    S_flag <= '0';
+                    O_flag <= '0';
+                    U_flag <= '0';
+                    Z_flag <= '0';
+                end if;
 
+                -- MEMORYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+                if echecker = 1 and M = '0' and mchecker = 0 then
+                    M <= '1';
+                else 
+                    M <= '0';    
+                end if;
+
+                -- WRITE BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACK
+                if W = '0' and wchecker = 0 and mchecker = 1 then
+                    register_values(storage) := answer;
+                    W <= '1';
+                else 
+                    W <= '0';
+                end if;
+
+                -- update checkers
+                if F = '1' then
+                    fchecker := 1;
+                end if;
+
+                if D = '1' then
+                    dchecker := 1;
+                end if;
+
+                if E = '1' then
+                    echecker := 1;
+                end if;
+
+                if M = '1' then
+                    mchecker := 1;
+                end if;
+
+                if W = '1' then
+                    wchecker := 1;
+                end if;
+
+                if fchecker = 1 and dchecker = 1 and echecker = 1 and mchecker = 1 and wchecker = 1 then
                     -- go to next instruction
                     PC := PC + 1;
 
                     -- go to next set of operands
                     operand_counter := operand_counter + 3;
-                   
-                end loop;
 
-                -- close the file
-                file_close(file_pointer);
-
-                no_of_instructions := i; -- secure the size of instructions
-
+                    -- clear checkers
+                    fchecker := 0;
+                    dchecker := 0;
+                    echecker := 0;
+                    mchecker := 0;
+                    wchecker := 0;
+                end if;
                 
+                if clock_cycle = '0' then
+                    clock_cycle <= '1';
+                else
+                    clock_cycle <= '0';
+                end if;
+                
+                -- let the process run for some time
+                wait for 10 ns;
+                
+            end loop;
 
-                wait;
+
+            wait;
         end process;
 
 end behave;
-
--- -- Specifying all Instruction
--- for i in 0 to no_of_instructions-1 loop
---     classification := specifyINST(instructions(i));
--- end loop;
-
--- -- Specifying all Immediate
--- for i in 0 to m_counter-1 loop
---     classification := specifyIMMDT(immediates(i));
--- end loop;
-
--- Specify all Register
--- for i in 0 to r_counter-1 loop
---     report integer'image(specifyREG(registers(i)));
--- end loop;
-
--- -- Print all Operands
--- for i in 0 to o_counter-1 loop
---     report operands(i);
--- end loop;
